@@ -25,10 +25,16 @@ enum kcov_mode {
 void kcov_task_init(struct task_struct *t);
 void kcov_task_exit(struct task_struct *t);
 
+void kcov_remote_start(u64 handle);
+void kcov_remote_stop(void);
+
 #else
 
 static inline void kcov_task_init(struct task_struct *t) {}
 static inline void kcov_task_exit(struct task_struct *t) {}
+
+static inline void kcov_remote_start(u64 handle) {}
+static inline void kcov_remote_stop(void) {}
 
 #endif /* CONFIG_KCOV */
 #endif /* _LINUX_KCOV_H */
