@@ -30,6 +30,7 @@ void kcov_task_exit(struct task_struct *t);
 /*
  * Reserved handle ranges:
  * 0000000000000000 - 0000ffffffffffff : common handles
+ * 0001000000000000 - 0001ffffffffffff : USB subsystem handles
  */
 void kcov_remote_start(u64 handle);
 void kcov_remote_stop(void);

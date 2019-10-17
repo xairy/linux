@@ -43,4 +43,11 @@ enum {
 #define KCOV_CMP_SIZE(n)        ((n) << 1)
 #define KCOV_CMP_MASK           KCOV_CMP_SIZE(3)
 
+#define KCOV_REMOTE_HANDLE_USB  0x0001000000000000ull
+
+static inline __u64 kcov_remote_handle_usb(__u64 bus)
+{
+	return KCOV_REMOTE_HANDLE_USB + bus;
+}
+
 #endif /* _LINUX_KCOV_IOCTLS_H */
