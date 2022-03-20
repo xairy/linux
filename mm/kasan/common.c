@@ -97,7 +97,9 @@ depot_stack_handle_t kasan_save_stack(gfp_t flags, bool can_alloc)
 	unsigned long entries[KASAN_STACK_DEPTH];
 	unsigned int nr_entries;
 
-	nr_entries = stack_trace_save(entries, ARRAY_SIZE(entries), 0);
+	nr_entries = stack_trace_save_shadow(entries, ARRAY_SIZE(entries));
+	if (nr_entries < 0)
+		nr_entries = stack_trace_save(entries, ARRAY_SIZE(entries), 0);
 	return __stack_depot_save(entries, nr_entries, flags, can_alloc);
 }
 
