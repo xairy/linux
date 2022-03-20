@@ -30,6 +30,68 @@
 #include "kasan.h"
 #include "../slab.h"
 
+#ifdef CONFIG_SHADOW_CALL_STACK
+#include <linux/scs.h>
+#include <asm/scs.h>
+
+/*
+ * Collect the stack trace from the Shadow Call Stack in a best-effort manner:
+ *
+ * - Do not collect the task part of the stack trace when in a hardirq.
+ * - Do not collect stack traces from other exception levels like SDEI.
+ * - Do not recover frames modified by KRETPROBES or by FTRACE.
+ *
+ * Note that marking the function with __noscs leads to unnacceptable
+ * performance impact, as helper functions stop being inlined.
+ */
+static inline int stack_trace_save_shadow(unsigned long *store,
+					  unsigned int size)
+{
+	unsigned long *scs_top, *scs_base, *frame;
+	unsigned int len = 0;
+
+	/* Get the SCS base. */
+	if (in_task() || in_serving_softirq()) {
+		/* Softirqs reuse the task SCS area. */
+		scs_base = task_scs(current);
+	} else if (in_hardirq()) {
+		/* Hardirqs use a per-CPU SCS area. */
+		scs_base = *this_cpu_ptr(&irq_shadow_call_stack_ptr);
+	} else {
+		/* Ignore other exception levels. */
+		return 0;
+	}
+
+	/*
+	 * Get the SCS pointer.
+	 *
+	 * Note that this assembly might be placed before the function's
+	 * prologue. In this case, the last stack frame will be lost. This is
+	 * acceptable: the lost frame will correspond to an internal KASAN
+	 * function, which is not relevant to identify the external call site.
+	 */
+	asm volatile("mov %0, x18" : "=&r" (scs_top));
+
+	/* The top SCS slot is empty. */
+	scs_top -= 1;
+
+	for (frame = scs_top; frame >= scs_base; frame--) {
+		if (len >= size)
+			break;
+		/* Do not leak PTR_AUTH tags in stack traces. */
+		store[len++] = ptrauth_strip_insn_pac(*frame);
+	}
+
+	return len;
+}
+#else /* CONFIG_SHADOW_CALL_STACK */
+static inline int stack_trace_save_shadow(unsigned long *store,
+					  unsigned int size)
+{
+	return -ENOSYS;
+}
+#endif /* CONFIG_SHADOW_CALL_STACK */
+
 depot_stack_handle_t kasan_save_stack(gfp_t flags, bool can_alloc)
 {
 	unsigned long entries[KASAN_STACK_DEPTH];
