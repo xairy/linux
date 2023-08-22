@@ -133,7 +133,6 @@ static int __dwc3_gadget_ep0_queue(struct dwc3_ep *dep,
 
 		direction = !dwc->ep0_expect_in;
 		dwc->delayed_status = false;
-		usb_gadget_set_state(dwc->gadget, USB_STATE_CONFIGURED);
 
 		if (dwc->ep0state == EP0_STATUS_PHASE)
 			__dwc3_ep0_do_control_status(dwc, dwc->eps[direction]);
@@ -552,7 +551,7 @@ static int dwc3_ep0_handle_endpoint(struct dwc3 *dwc,
 
 		/* ClearFeature(Halt) may need delayed status */
 		if (!set && (dep->flags & DWC3_EP_END_TRANSFER_PENDING))
-			return USB_GADGET_DELAYED_STATUS;
+			dwc->delayed_status = true;
 
 		break;
 	default:
@@ -625,6 +624,9 @@ static int dwc3_ep0_delegate_req(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
 		spin_unlock(&dwc->lock);
 		ret = dwc->gadget_driver->setup(dwc->gadget, ctrl);
 		spin_lock(&dwc->lock);
+
+		if (ret >= 0 && !le16_to_cpu(ctrl->wLength))
+			dwc->delayed_status = true;
 	}
 	return ret;
 }
@@ -647,18 +649,7 @@ static int dwc3_ep0_set_config(struct dwc3 *dwc, struct usb_ctrlrequest *ctrl)
 
 		ret = dwc3_ep0_delegate_req(dwc, ctrl);
 		/* if the cfg matches and the cfg is non zero */
-		if (cfg && (!ret || (ret == USB_GADGET_DELAYED_STATUS))) {
-
-			/*
-			 * only change state if set_config has already
-			 * been processed. If gadget driver returns
-			 * USB_GADGET_DELAYED_STATUS, we will wait
-			 * to change the state on the next usb_ep_queue()
-			 */
-			if (ret == 0)
-				usb_gadget_set_state(dwc->gadget,
-						USB_STATE_CONFIGURED);
-
+		if (cfg && !ret) {
 			/*
 			 * Enable transition to U1/U2 state when
 			 * nothing is pending from application.
@@ -841,9 +832,6 @@ static void dwc3_ep0_inspect_setup(struct dwc3 *dwc,
 		ret = dwc3_ep0_std_request(dwc, ctrl);
 	else
 		ret = dwc3_ep0_delegate_req(dwc, ctrl);
-
-	if (ret == USB_GADGET_DELAYED_STATUS)
-		dwc->delayed_status = true;
 
 out:
 	if (ret < 0)
@@ -1168,8 +1156,6 @@ static void dwc3_ep0_xfernotready(struct dwc3 *dwc,
 			 */
 			if (!list_empty(&dep->pending_list)) {
 				dwc->delayed_status = false;
-				usb_gadget_set_state(dwc->gadget,
-						     USB_STATE_CONFIGURED);
 				dwc3_ep0_do_control_status(dwc, event);
 			}
 
