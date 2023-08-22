@@ -991,7 +991,7 @@ struct dwc2_hregs_backup {
  * @ctrl_buff:          Buffer for EP0 control requests.
  * @ctrl_req:           Request for EP0 control packets.
  * @ep0_state:          EP0 control transfers state
- * @delayed_status:		true when gadget driver asks for delayed status
+ * @delayed_status:	True when gadget driver expects delayed status
  * @test_mode:          USB test mode requested by the host
  * @remote_wakeup_allowed: True if device is allowed to wake-up host by
  *                      remote-wakeup signalling

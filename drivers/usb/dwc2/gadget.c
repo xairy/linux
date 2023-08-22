@@ -1977,17 +1977,17 @@ static void dwc2_hsotg_process_control(struct dwc2_hsotg *hsotg,
 
 	/* as a fallback, try delivering it to the driver to deal with */
 
+	hsotg->delayed_status = false;
+
 	if (ret == 0 && hsotg->driver) {
 		spin_unlock(&hsotg->lock);
 		ret = hsotg->driver->setup(&hsotg->gadget, ctrl);
 		spin_lock(&hsotg->lock);
 		if (ret < 0)
 			dev_dbg(hsotg->dev, "driver->setup() ret %d\n", ret);
+		else if (le16_to_cpu(ctrl->wLength) == 0)
+			hsotg->delayed_status = true;
 	}
-
-	hsotg->delayed_status = false;
-	if (ret == USB_GADGET_DELAYED_STATUS)
-		hsotg->delayed_status = true;
 
 	/*
 	 * the request is either unhandlable, or is not formatted correctly
