@@ -2296,6 +2296,12 @@ check_value:
 	}
 
 done:
+	/*
+	 * Do not propagate USB_GADGET_DELAYED_STATUS outside
+	 * of the composite framework.
+	 */
+	if (value == USB_GADGET_DELAYED_STATUS)
+		value = 0;
 	/* device either stalls (value < 0) or reports success */
 	return value;
 }
