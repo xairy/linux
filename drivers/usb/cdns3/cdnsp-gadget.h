@@ -1361,6 +1361,7 @@ struct cdnsp_port {
  * @ep0_stage: ep0 stage during enumeration process.
  * @three_stage_setup: Three state or two state setup.
  * @ep0_expect_in: Data IN expected for control transfer.
+ * @delayed_status: Gadget driver expects delayed status stage.
  * @setup_id: Setup identifier.
  * @setup_speed - Speed detected for current SETUP packet.
  * @setup_buf: Buffer for SETUP packet.
@@ -1417,6 +1418,7 @@ struct cdnsp_device {
 	enum cdnsp_ep0_stage ep0_stage;
 	u8 three_stage_setup;
 	u8 ep0_expect_in;
+	u8 delayed_status;
 	u8 setup_id;
 	u8 setup_speed;
 	void *setup_buf;

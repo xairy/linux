@@ -47,6 +47,9 @@ static int cdnsp_ep0_delegate_req(struct cdnsp_device *pdev,
 	ret = pdev->gadget_driver->setup(&pdev->gadget, ctrl);
 	spin_lock(&pdev->lock);
 
+	if (ret >= 0 && !le16_to_cpu(ctrl->wLength))
+		pdev->delayed_status = true;
+
 	return ret;
 }
 
@@ -454,12 +457,14 @@ void cdnsp_setup_analyze(struct cdnsp_device *pdev)
 		pdev->ep0_expect_in = !!(ctrl->bRequestType & USB_DIR_IN);
 	}
 
+	pdev->delayed_status = false;
+
 	if ((ctrl->bRequestType & USB_TYPE_MASK) == USB_TYPE_STANDARD)
 		ret = cdnsp_ep0_std_request(pdev, ctrl);
 	else
 		ret = cdnsp_ep0_delegate_req(pdev, ctrl);
 
-	if (ret == USB_GADGET_DELAYED_STATUS) {
+	if (ret >= 0 && pdev->delayed_status) {
 		trace_cdnsp_ep0_status_stage("delayed");
 		return;
 	}
