@@ -1275,6 +1275,7 @@ struct cdns3_request {
  * @u2_allowed: allow device transition to u2 state
  * @is_selfpowered: device is self powered
  * @setup_pending: setup packet is processing by gadget driver
+ * @delayed_status: dagdet driver expects delayed status stage
  * @hw_configured_flag: hardware endpoint configuration was set.
  * @wake_up_flag: allow device to remote up the host
  * @status_completion_no_call: indicate that driver is waiting for status s
@@ -1321,6 +1322,7 @@ struct cdns3_device {
 	unsigned			u2_allowed:1;
 	unsigned			is_selfpowered:1;
 	unsigned			setup_pending:1;
+	unsigned			delayed_status:1;
 	unsigned			hw_configured_flag:1;
 	unsigned			wake_up_flag:1;
 	unsigned			status_completion_no_call:1;

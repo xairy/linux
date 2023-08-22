@@ -90,6 +90,10 @@ static int cdns3_ep0_delegate_req(struct cdns3_device *priv_dev,
 	ret = priv_dev->gadget_driver->setup(&priv_dev->gadget, ctrl_req);
 	priv_dev->setup_pending = 0;
 	spin_lock(&priv_dev->lock);
+
+	if (ret >= 0 && !le16_to_cpu(ctrl_req->wLength))
+		priv_dev->delayed_status = 1;
+
 	return ret;
 }
 
@@ -130,8 +134,7 @@ static void cdns3_ep0_complete_setup(struct cdns3_device *priv_dev,
  * @priv_dev: extended gadget object
  * @ctrl_req: pointer to received setup packet
  *
- * Returns 0 if success, USB_GADGET_DELAYED_STATUS on deferred status stage,
- * error code on error
+ * Returns 0 if success, error code on error
  */
 static int cdns3_req_ep0_set_configuration(struct cdns3_device *priv_dev,
 					   struct usb_ctrlrequest *ctrl_req)
@@ -161,7 +164,7 @@ static int cdns3_req_ep0_set_configuration(struct cdns3_device *priv_dev,
 	return 0;
 
 reset_config:
-	if (result != USB_GADGET_DELAYED_STATUS)
+	if (result < 0 || !priv_dev->delayed_status)
 		cdns3_hw_reset_eps_config(priv_dev);
 
 	usb_gadget_set_state(&priv_dev->gadget,
@@ -552,12 +555,14 @@ static void cdns3_ep0_setup_phase(struct cdns3_device *priv_dev)
 	else
 		priv_dev->ep0_stage = CDNS3_STATUS_STAGE;
 
+	priv_dev->delayed_status = 0;
+
 	if ((ctrl->bRequestType & USB_TYPE_MASK) == USB_TYPE_STANDARD)
 		result = cdns3_ep0_standard_request(priv_dev, ctrl);
 	else
 		result = cdns3_ep0_delegate_req(priv_dev, ctrl);
 
-	if (result == USB_GADGET_DELAYED_STATUS)
+	if (result >= 0 && priv_dev->delayed_status)
 		return;
 
 	if (result < 0)
