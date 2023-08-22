@@ -653,8 +653,20 @@ __acquires(mtu->lock)
 
 	if (handled < 0)
 		goto stall;
-	else if (handled > 0)
-		goto finish;
+
+	if (handled > 0) {
+		if (mtu->test_mode) {
+			;	/* nothing to do */
+		} else if (le16_to_cpu(setup.wLength) == 0) { /* no data stage */
+
+			ep0_do_status_stage(mtu);
+			/* complete zlp request directly */
+			mreq = next_ep0_request(mtu);
+			if (mreq && !mreq->request.length)
+				ep0_req_giveback(mtu, &mreq->request);
+		}
+		return 0;
+	}
 
 	handled = forward_to_driver(mtu, &setup);
 	if (handled < 0) {
@@ -667,10 +679,9 @@ stall:
 		return 0;
 	}
 
-finish:
 	if (mtu->test_mode) {
 		;	/* nothing to do */
-	} else if (handled == USB_GADGET_DELAYED_STATUS) {
+	} else if (le16_to_cpu(setup.wLength) == 0) { /* no data stage */
 
 		mreq = next_ep0_request(mtu);
 		if (mreq) {
@@ -681,13 +692,6 @@ finish:
 			/* do delayed STATUS stage till receive ep0_queue */
 			mtu->delayed_status = true;
 		}
-	} else if (le16_to_cpu(setup.wLength) == 0) { /* no data stage */
-
-		ep0_do_status_stage(mtu);
-		/* complete zlp request directly */
-		mreq = next_ep0_request(mtu);
-		if (mreq && !mreq->request.length)
-			ep0_req_giveback(mtu, &mreq->request);
 	}
 
 	return 0;
