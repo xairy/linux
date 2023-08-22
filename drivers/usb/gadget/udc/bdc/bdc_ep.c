@@ -1435,6 +1435,7 @@ static int handle_control_request(struct bdc *bdc)
 	int delegate_setup = 0;
 	int ret = 0;
 	int config = 0;
+	int len = 0;
 
 	setup_pkt = &bdc->setup_pkt;
 	dev_dbg(bdc->dev, "%s\n", __func__);
@@ -1501,6 +1502,10 @@ static int handle_control_request(struct bdc *bdc)
 		spin_unlock(&bdc->lock);
 		ret = bdc->gadget_driver->setup(&bdc->gadget, setup_pkt);
 		spin_lock(&bdc->lock);
+
+		len = le16_to_cpu(setup_pkt->wLength);
+		if (ret >= 0 && !len)
+			bdc->delayed_status = true;
 	}
 
 	return ret;
@@ -1526,12 +1531,11 @@ void bdc_xsf_ep0_data_start(struct bdc *bdc, struct bdc_sr *sreport)
 			ep0_state_string[bdc->ep0_state]);
 
 	ret = handle_control_request(bdc);
-	if (ret == USB_GADGET_DELAYED_STATUS) {
+	if (ret >= 0 && bdc->delayed_status) {
 		/*
 		 * The ep0 state will remain WAIT_FOR_DATA_START till
 		 * we received ep_queue on ep0
 		 */
-		bdc->delayed_status = true;
 		return;
 	}
 	if (!ret) {
@@ -1588,8 +1592,7 @@ void bdc_xsf_ep0_status_start(struct bdc *bdc, struct bdc_sr *sreport)
 	 */
 	if (!le16_to_cpu(setup_pkt->wLength)) {
 		ret = handle_control_request(bdc);
-		if (ret == USB_GADGET_DELAYED_STATUS) {
-			bdc->delayed_status = true;
+		if (ret >= 0 && bdc->delayed_status) {
 			/* ep0_state will remain WAIT_FOR_STATUS_START */
 			return;
 		}
