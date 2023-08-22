@@ -84,6 +84,9 @@ static int cdns2_ep0_delegate_req(struct cdns2_device *pdev)
 	ret = pdev->gadget_driver->setup(&pdev->gadget, &pdev->setup);
 	spin_lock(&pdev->lock);
 
+	if (ret >= 0 && !le16_to_cpu(pdev->setup.wLength))
+		pdev->delayed_status = true;
+
 	return ret;
 }
 
@@ -439,12 +442,14 @@ void cdns2_handle_setup_packet(struct cdns2_device *pdev)
 	    pdev->dev_address != reg)
 		cdns2_req_ep0_set_address(pdev, reg);
 
+	pdev->delayed_status = false;
+
 	if ((ctrl->bRequestType & USB_TYPE_MASK) == USB_TYPE_STANDARD)
 		ret = cdns2_ep0_std_request(pdev);
 	else
 		ret = cdns2_ep0_delegate_req(pdev);
 
-	if (ret == USB_GADGET_DELAYED_STATUS) {
+	if (ret >= 0 && pdev->delayed_status) {
 		trace_cdns2_ep0_status_stage("delayed");
 		return;
 	}

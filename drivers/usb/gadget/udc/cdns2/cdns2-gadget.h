@@ -621,6 +621,7 @@ struct cdns2_request {
  * @setup: used while processing usb control requests.
  * @ep0_preq: private request used while handling EP0.
  * @ep0_stage: ep0 stage during enumeration process.
+ * @ep0_stage: whether gadget driver expects delayed status stage.
  * @zlp_buf: zlp buffer.
  * @dev_address: device address assigned by host.
  * @eps: array of objects describing endpoints.
@@ -657,6 +658,7 @@ struct cdns2_device {
 	struct usb_ctrlrequest setup;
 	struct cdns2_request ep0_preq;
 	u8 ep0_stage;
+	u8 delayed_status;
 	void *zlp_buf;
 	u8 dev_address;
 	struct cdns2_endpoint eps[CDNS2_ENDPOINTS_NUM];
