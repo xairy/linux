@@ -2225,8 +2225,8 @@ static int usbf_req_delegate(struct usbf_udc *udc,
 		dev_dbg(udc->dev, "udc driver setup failed %d\n", ret);
 		return ret;
 	}
-	if (ret == USB_GADGET_DELAYED_STATUS) {
-		dev_dbg(udc->dev, "delayed status set\n");
+	if (le16_to_cpu(ctrlrequest->wLength) == 0) {
+		dev_dbg(udc->dev, "delaying status for 0-length request\n");
 		udc->ep[0].delayed_status = 1;
 		return 0;
 	}
